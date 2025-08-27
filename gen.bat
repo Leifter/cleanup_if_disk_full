@@ -1,0 +1,1 @@
+python gen_files.py --start-date "2025-01-01" --count 30 --dir cleanup_folder --overwrite
