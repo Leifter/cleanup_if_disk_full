@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import time
 from pathlib import Path
 from datetime import datetime, timedelta
 import argparse
@@ -18,9 +18,12 @@ def parse_dates(args):
     # Вариант 3: одна и та же дата count раз
     return [ datetime.now().strftime(args.date_format) ] * args.count
 
-def make_files(target_dir: Path, dates, name_pattern, ext, content_template, overwrite=False):
+def make_files(target_dir: Path, dates, name_pattern, ext, overwrite=False):
     target_dir.mkdir(parents=True, exist_ok=True)
     created = []
+    file_size = 20*1024*1024
+    avarage_size_limit = 20*file_size
+    avarage_size = 0
     for i, d in enumerate(dates, start=1):
         # Подставляем дату и индекс в шаблон имени
         fname = name_pattern.replace("{date}", d).replace("{i}", str(i))
@@ -34,8 +37,15 @@ def make_files(target_dir: Path, dates, name_pattern, ext, content_template, ove
                 suffix += 1
             path = target_dir / f"{path.stem}_{suffix}{path.suffix}"
         # Сформировать содержимое
-        content = content_template.replace("{date}", d).replace("{i}", str(i))
-        path.write_text(content, encoding='utf-8')
+        content = bytearray(file_size)
+        if avarage_size > avarage_size_limit:
+            print("Задержка, так как создано достаточно файлов")
+            time.sleep(2)
+        with open(path, "wb") as f:
+            f.write(content)
+        # path.write_text(content, encoding='utf-8')
+        print(f"Создан файл: {path}")
+        avarage_size += file_size
         created.append(str(path))
     return created
 
@@ -49,13 +59,12 @@ def main():
     parser.add_argument("--step-days", type=int, default=1, help="step in days between dates for sequence")
     parser.add_argument("--name-pattern", default="file_{i}_{date}", help="file name pattern, use {date} and {i}")
     parser.add_argument("--ext", default="txt", help="file extension")
-    parser.add_argument("--content", default="Date: {date}\nIndex: {i}\n", help="file content template")
     parser.add_argument("--overwrite", action="store_true", help="overwrite existing files")
     args = parser.parse_args()
 
     target_dir = Path(args.dir)
     dates = parse_dates(args)
-    created = make_files(target_dir, dates, args.name_pattern, args.ext, args.content, args.overwrite)
+    created = make_files(target_dir, dates, args.name_pattern, args.ext, args.overwrite)
     print("Created files:")
     for p in created:
         print(p)
